@@ -1,4 +1,4 @@
-#include<io.h>
+п»ї#include<io.h>
 #include<stdio.h>
 #include<winsock2.h>
 #include <locale.h>
@@ -9,20 +9,20 @@
 SOCKET *online_clients = NULL;
 size_t number_online_clients = 0;
 
-// Добавление клиента в массив онлайн пользователей
+// Р”РѕР±Р°РІР»РµРЅРёРµ РєР»РёРµРЅС‚Р° РІ РјР°СЃСЃРёРІ РѕРЅР»Р°Р№РЅ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 void addClient(const SOCKET *client_socket) {
 	number_online_clients++;
 	SOCKET* temp = realloc(online_clients, number_online_clients * sizeof(SOCKET));
 	if (temp == NULL) {
-		printf("Ошибка: Не удалось выделить память\n");
+		printf("РћС€РёР±РєР°: РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РґРµР»РёС‚СЊ РїР°РјСЏС‚СЊ\n");
 		return;
 	}
 	online_clients = temp;
-	online_clients[number_online_clients - 1] = *client_socket; // Добавляем нового клиента в конец массива
+	online_clients[number_online_clients - 1] = *client_socket; // Р”РѕР±Р°РІР»СЏРµРј РЅРѕРІРѕРіРѕ РєР»РёРµРЅС‚Р° РІ РєРѕРЅРµС† РјР°СЃСЃРёРІР°
 }
 
 void delClient(const SOCKET* client_socket) {
-	// Поиск индекса пользователя по сокету
+	// РџРѕРёСЃРє РёРЅРґРµРєСЃР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СЃРѕРєРµС‚Сѓ
 	int index = -1;
 	for (int i = 0; i < number_online_clients; i++) {
 		if (online_clients[i] == *client_socket) {
@@ -32,17 +32,17 @@ void delClient(const SOCKET* client_socket) {
 	}
 
 	if (index == -1) {
-		// Добавить логирования потом здесь
-		printf("Ошибка: Пользователь не найден\n");
+		// Р”РѕР±Р°РІРёС‚СЊ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ РїРѕС‚РѕРј Р·РґРµСЃСЊ
+		printf("РћС€РёР±РєР°: РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ\n");
 		return;
 	}
 
-	// Освобождение памяти для удаленного пользователя
+	// РћСЃРІРѕР±РѕР¶РґРµРЅРёРµ РїР°РјСЏС‚Рё РґР»СЏ СѓРґР°Р»РµРЅРЅРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 	for (int i = index; i < number_online_clients - 1; i++) {
-		online_clients[i] = online_clients[i + 1]; // Сдвигаем элементы массива
+		online_clients[i] = online_clients[i + 1]; // РЎРґРІРёРіР°РµРј СЌР»РµРјРµРЅС‚С‹ РјР°СЃСЃРёРІР°
 	}
-	number_online_clients--; // Уменьшаем количество пользователей
-	online_clients = realloc(online_clients, number_online_clients * sizeof(SOCKET)); // Уменьшаем размер массива
+	number_online_clients--; // РЈРјРµРЅСЊС€Р°РµРј РєРѕР»РёС‡РµСЃС‚РІРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+	online_clients = realloc(online_clients, number_online_clients * sizeof(SOCKET)); // РЈРјРµРЅСЊС€Р°РµРј СЂР°Р·РјРµСЂ РјР°СЃСЃРёРІР°
 	printf("%d", (int)number_online_clients);
 }
 
@@ -56,9 +56,7 @@ int main(int argc, char* argv[])
 	char* message, client_reply[2000];
 	int recv_size;
 
-	setlocale(LC_ALL, "UTF-8");
-
-	// Инициализация winsock
+	// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ winsock
 	printf("\nInitialising Winsock...");
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
@@ -68,7 +66,7 @@ int main(int argc, char* argv[])
 
 	printf("Initialised.\n");
 
-	// Создание сокета
+	// РЎРѕР·РґР°РЅРёРµ СЃРѕРєРµС‚Р°
 	if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
 		printf("Could not create socket : %d", WSAGetLastError());
@@ -76,12 +74,12 @@ int main(int argc, char* argv[])
 
 	printf("Socket created.\n");
 
-	// Заполнение полей структуры 
+	// Р—Р°РїРѕР»РЅРµРЅРёРµ РїРѕР»РµР№ СЃС‚СЂСѓРєС‚СѓСЂС‹ 
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
 	server.sin_port = htons(8888);
 
-	// Привязка сокета к адресу
+	// РџСЂРёРІСЏР·РєР° СЃРѕРєРµС‚Р° Рє Р°РґСЂРµСЃСѓ
 	if (bind(s, (struct sockaddr*)&server, sizeof(server)) == SOCKET_ERROR)
 	{
 		printf("Bind failed with error code : %d", WSAGetLastError());
@@ -90,10 +88,10 @@ int main(int argc, char* argv[])
 
 	puts("Bind done");
 
-	// Прослушивание входящих соединений. 3 - размер очереди
+	// РџСЂРѕСЃР»СѓС€РёРІР°РЅРёРµ РІС…РѕРґСЏС‰РёС… СЃРѕРµРґРёРЅРµРЅРёР№. 3 - СЂР°Р·РјРµСЂ РѕС‡РµСЂРµРґРё
 	listen(s, 3);
 
-	// Прием подключений
+	// РџСЂРёРµРј РїРѕРґРєР»СЋС‡РµРЅРёР№
 	puts("Waiting for incoming connections...");
 
 	c = sizeof(struct sockaddr_in);
@@ -111,14 +109,14 @@ int main(int argc, char* argv[])
 
 			puts("Reply received\n");
 
-			// Вывод принятого сообщения в консоль
+			// Р’С‹РІРѕРґ РїСЂРёРЅСЏС‚РѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ РІ РєРѕРЅСЃРѕР»СЊ
 			if (recv_size >= 0 && recv_size < 2000) {
 				client_reply[recv_size] = '\0';
 				puts(client_reply);
 			}
 			else {
-				// Обработка ошибки или прерывания соединения
-				// Например:
+				// РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РєРё РёР»Рё РїСЂРµСЂС‹РІР°РЅРёСЏ СЃРѕРµРґРёРЅРµРЅРёСЏ
+				// РќР°РїСЂРёРјРµСЂ:
 				puts("Error: Invalid recv_size or buffer overflow occurred");
 
 				delClient(&new_socket);
@@ -126,7 +124,7 @@ int main(int argc, char* argv[])
 				return 1;
 			}
 
-			// Отправка сообщения клиенту
+			// РћС‚РїСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёСЏ РєР»РёРµРЅС‚Сѓ
 			//message = "Hello Client , I have received your connection. But I have to go now, bye\n";
 			//send(new_socket, message, strlen(message), 0);
 	

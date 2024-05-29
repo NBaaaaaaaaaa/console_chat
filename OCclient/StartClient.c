@@ -1,4 +1,4 @@
-#include<stdio.h>
+п»ї#include<stdio.h>
 #include<winsock2.h>
 #include <locale.h>
 
@@ -14,39 +14,37 @@ int main(int argc, char* argv[])
 
 	char buffer[2000];
 
-	setlocale(LC_ALL, "UTF-8");
-
-	// Инициализация winsock
+	// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ winsock
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
 		printf("Failed. Error Code : %d", WSAGetLastError());
 		return 1;
 	}
 
-	// Создание сокета
+	// РЎРѕР·РґР°РЅРёРµ СЃРѕРєРµС‚Р°
 	if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
 		printf("Could not create socket : %d", WSAGetLastError());
 	}
 
-	// Заполнение полей структуры 
+	// Р—Р°РїРѕР»РЅРµРЅРёРµ РїРѕР»РµР№ СЃС‚СЂСѓРєС‚СѓСЂС‹ 
 	if (inet_pton(AF_INET, "127.0.0.1", &server.sin_addr) <= 0) {
-		printf("Ошибка преобразования IP-адреса\n");
+		printf("РћС€РёР±РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ IP-Р°РґСЂРµСЃР°\n");
 		return 1;
 	}
 
 	server.sin_family = AF_INET;
 	server.sin_port = htons(8888);
 
-	// Попытка установки соединения
+	// РџРѕРїС‹С‚РєР° СѓСЃС‚Р°РЅРѕРІРєРё СЃРѕРµРґРёРЅРµРЅРёСЏ
 	if (connect(s, (struct sockaddr*)&server, sizeof(server)) < 0)
 	{
 		return 1;
 	}
 
 
-	// Попытка отправки сообщения
-	//message = "Привет hello";
+	// РџРѕРїС‹С‚РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ
+	//message = "РџСЂРёРІРµС‚ hello";
 	while (TRUE) {
 		fgets(buffer, sizeof(buffer), stdin);
 		if (send(s, buffer, (int)strlen(buffer), 0) < 0)
@@ -56,7 +54,7 @@ int main(int argc, char* argv[])
 		puts(buffer);
 	}
 
-	// Проверка, были ли данные получены
+	// РџСЂРѕРІРµСЂРєР°, Р±С‹Р»Рё Р»Рё РґР°РЅРЅС‹Рµ РїРѕР»СѓС‡РµРЅС‹
 	/*
 	if ((recv_size = recv(s, server_reply, 2000, 0)) == SOCKET_ERROR)
 	{
@@ -65,14 +63,14 @@ int main(int argc, char* argv[])
 
 	puts("Reply received\n");
 
-	// Вывод принятого сообщения в консоль
+	// Р’С‹РІРѕРґ РїСЂРёРЅСЏС‚РѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ РІ РєРѕРЅСЃРѕР»СЊ
 	if (recv_size >= 0 && recv_size < 2000) {
 		server_reply[recv_size] = '\0';
 		puts(server_reply);
 	}
 	else {
-		// Обработка ошибки или прерывания соединения
-		// Например:
+		// РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РєРё РёР»Рё РїСЂРµСЂС‹РІР°РЅРёСЏ СЃРѕРµРґРёРЅРµРЅРёСЏ
+		// РќР°РїСЂРёРјРµСЂ:
 		puts("Error: Invalid recv_size or buffer overflow occurred");
 	}
 	*/
