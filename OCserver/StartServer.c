@@ -8,32 +8,33 @@
 
 struct clientData *online_clients = NULL;
 size_t number_online_clients = 0;
-unsigned int thread_id = 0;
 
 // Структура данных клиента. Передается в поток.
 struct clientData{
-	unsigned int id;
 	SOCKET client_socket;
-	const HANDLE *mutex;
+	HANDLE *mutex;
 };
 
 // Добавление клиента в массив онлайн пользователей
-void addClient(const struct clientData *data) {
+void addClient(struct clientData *data) {
 	number_online_clients++;
-	SOCKET* temp = realloc(online_clients, number_online_clients * sizeof(struct clientData));
+	struct clientData* temp = realloc(online_clients, number_online_clients * sizeof(struct clientData));
 	if (temp == NULL) {
 		printf("Ошибка: Не удалось выделить память\n");
 		return;
 	}
 	online_clients = temp;
-	online_clients[number_online_clients - 1] = *data; // Добавляем нового клиента в конец массива
+
+	// Добавляем нового клиента в конец массива
+	online_clients[number_online_clients - 1] = *data; 
 }
 
-void delClient(const struct clientData *data) {
+// Удаление клиента из массива онлайн пользователей
+void delClient(SOCKET *client_socket) {
 	// Поиск индекса пользователя по сокету
 	int index = -1;
 	for (int i = 0; i < number_online_clients; i++) {
-		if (online_clients[i].id == data->id) {
+		if (online_clients[i].client_socket == *client_socket) {
 			index = i;
 			break;
 		}
@@ -41,19 +42,21 @@ void delClient(const struct clientData *data) {
 
 	if (index == -1) {
 		// Добавить логирования потом здесь
-		printf("Ошибка: Пользователь не найден\n");
+		printf("Error: The user was not found\n");
 		return;
 	}
 
 	// Освобождение памяти для удаленного пользователя
 	for (int i = index; i < number_online_clients - 1; i++) {
-		online_clients[i] = online_clients[i + 1]; // Сдвигаем элементы массива
+		online_clients[i] = online_clients[i + 1];
 	}
-	number_online_clients--; // Уменьшаем количество пользователей
+
+	number_online_clients--;
 	online_clients = realloc(online_clients, number_online_clients * sizeof(struct clientData)); // Уменьшаем размер массива
-	printf("%d", (int)number_online_clients);
+	printf("Online clients - %d \n", (int)number_online_clients);
 }
 
+// Обработка подключенного клиента
 void processingClient(struct clientData *data) {
 	char* message, client_reply[2000];
 	int recv_size;
@@ -62,6 +65,7 @@ void processingClient(struct clientData *data) {
 
 	puts("Connection accepted");
 
+	// Добавление пользователя в массив
 	WaitForSingleObject(data->mutex, INFINITE);
 	addClient(data);
 	ReleaseMutex(data->mutex);
@@ -74,10 +78,17 @@ void processingClient(struct clientData *data) {
 
 		puts("Reply received\n");
 
+
 		// Вывод принятого сообщения в консоль
 		if (recv_size >= 0 && recv_size < 2000) {
 			client_reply[recv_size] = '\0';
-			puts(client_reply);
+
+			for (size_t i = 0; i < number_online_clients; i++) {
+				if (online_clients[i].client_socket != client_socket) {
+					send(online_clients[i].client_socket, client_reply, strlen(client_reply), 0);
+				}
+			}
+			//puts(client_reply);
 		}
 		else {
 			// Обработка ошибки или прерывания соединения
@@ -85,13 +96,14 @@ void processingClient(struct clientData *data) {
 			puts("Error: Invalid recv_size or buffer overflow occurred");
 
 
+			// Удаление пользователя из массива
 			WaitForSingleObject(data->mutex, INFINITE);
-			delClient(data);
+			delClient(&(data->client_socket));
 			ReleaseMutex(data->mutex);
 
 			closesocket(client_socket);
 			ExitThread(0);
-			return 1;
+			return;
 		}
 
 		// Отправка сообщения клиенту
@@ -110,7 +122,7 @@ int main(int argc, char* argv[])
 
 	struct clientData client_struc;
 
-	const HANDLE hMutex = CreateMutex(NULL, FALSE, NULL);
+	HANDLE hMutex = CreateMutex(NULL, FALSE, NULL);
 
 	// Инициализация winsock
 	printf("\nInitialising Winsock...");
@@ -154,8 +166,8 @@ int main(int argc, char* argv[])
 
 	while ((new_socket = accept(s, (struct sockaddr*)&client, &c)) != INVALID_SOCKET)
 	{
-		thread_id++;
-		client_struc.id = thread_id;
+
+		// Заполнение структуры клиента
 		client_struc.client_socket = new_socket;
 		client_struc.mutex = &hMutex;
 

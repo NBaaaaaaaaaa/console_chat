@@ -127,7 +127,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MessageProcessing.c" />
     <ClCompile Include="StartServer.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MessageProcessing.h" />
+    <ClInclude Include="StartServer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

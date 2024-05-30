@@ -1,17 +1,49 @@
 ﻿#include<stdio.h>
 #include<winsock2.h>
 
+#include <windows.h>
+
 #pragma comment(lib,"ws2_32.lib")
 
-int main(int argc, char* argv[])
-{
+// Структура данных клиента.
+struct clientData {
+	SOCKET client_socket;
+	HANDLE* mutex;
+};
+
+void listet_server(struct clientData* data) {
+	int recv_size;
+	char server_reply[2000];
+
+	while (TRUE) {
+		if ((recv_size = recv(data->client_socket, server_reply, 2000, 0)) == SOCKET_ERROR) {
+			puts("recv failed");
+		}
+
+		//puts("Reply received\n");
+
+		if (recv_size >= 0 && recv_size < 2000) {
+			server_reply[recv_size] = '\0';
+			puts(server_reply);
+		}
+		else {
+			// Обработка ошибки или прерывания соединения
+			// Например:
+			puts("Error: Invalid recv_size or buffer overflow occurred");
+		}
+	}
+}
+
+int main(int argc, char* argv[]) {
 	WSADATA wsa;
 	SOCKET s;
 	struct sockaddr_in server;
-	char* message, server_reply[2000];
-	int recv_size;
+	char* message;
 
 	char buffer[2000];
+
+	struct clientData client_struc;
+	HANDLE hMutex = CreateMutex(NULL, FALSE, NULL);
 
 	// Инициализация winsock
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
@@ -41,6 +73,11 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	
+	client_struc.client_socket = s;
+	client_struc.mutex = &hMutex;
+
+	CreateThread(NULL, 0, listet_server, &client_struc, 0, NULL);
 
 	// Попытка отправки сообщения
 	//message = "Привет hello";
@@ -50,7 +87,7 @@ int main(int argc, char* argv[])
 		{
 			return 1;
 		}
-		puts(buffer);
+		//puts(buffer);
 	}
 
 	// Проверка, были ли данные получены

@@ -18,5 +18,16 @@
     <ClCompile Include="StartServer.c">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="MessageProcessing.c">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MessageProcessing.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="StartServer.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
