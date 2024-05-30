@@ -127,10 +127,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="LogInSignUp.c" />
     <ClCompile Include="MessageProcessing.c" />
     <ClCompile Include="StartServer.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LogInSignUp.h" />
     <ClInclude Include="MessageProcessing.h" />
     <ClInclude Include="StartServer.h" />
   </ItemGroup>

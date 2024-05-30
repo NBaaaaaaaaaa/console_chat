@@ -1,0 +1,9 @@
+﻿#pragma once
+
+enum StatusClient
+{
+	NOT_AUTHORIZED,
+	ENTER_USERNAME,
+	ENTER_PASSWORD,
+	AUTHORIZED
+};

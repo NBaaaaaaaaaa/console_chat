@@ -4,6 +4,10 @@
 
 #include <windows.h>
 
+#include <string.h>
+
+#include "LogInSignUp.h"
+
 #pragma comment(lib,"ws2_32.lib")
 
 struct clientData *online_clients = NULL;
@@ -11,6 +15,7 @@ size_t number_online_clients = 0;
 
 // Структура данных клиента. Передается в поток.
 struct clientData{
+	enum StatusClient status_client;
 	SOCKET client_socket;
 	HANDLE *mutex;
 };
@@ -60,6 +65,9 @@ void delClient(SOCKET *client_socket) {
 void processingClient(struct clientData *data) {
 	char* message, client_reply[2000];
 	int recv_size;
+	
+	// Строка необходима для reg или log
+	char first_three_bytes[4];
 
 	SOCKET client_socket = data->client_socket;
 
@@ -71,24 +79,72 @@ void processingClient(struct clientData *data) {
 	ReleaseMutex(data->mutex);
 
 	while (TRUE) {
+		switch (data->status_client)
+		{
+		case NOT_AUTHORIZED:
+			message = "reg - sign up\nlog - log in";
+			send(data->client_socket, message, strlen(message), 0);
+			break;
+		case ENTER_USERNAME:
+			message = "username: ";
+			send(data->client_socket, message, strlen(message), 0);
+			break;
+		case ENTER_PASSWORD:
+			message = "password: ";
+			send(data->client_socket, message, strlen(message), 0);
+			break;
+		}
+		
+		// Получение сообщения от пользователя
 		if ((recv_size = recv(client_socket, client_reply, 2000, 0)) == SOCKET_ERROR)
 		{
 			puts("recv failed");
+			//надо тут сделать закрытие всего что можно
+			return;
 		}
 
 		puts("Reply received\n");
 
-
-		// Вывод принятого сообщения в консоль
 		if (recv_size >= 0 && recv_size < 2000) {
-			client_reply[recv_size] = '\0';
+			
 
-			for (size_t i = 0; i < number_online_clients; i++) {
-				if (online_clients[i].client_socket != client_socket) {
-					send(online_clients[i].client_socket, client_reply, strlen(client_reply), 0);
+			//printf("%d", strcmp(first_three_bytes, "reg\0"));
+
+			switch (data->status_client)
+			{
+			case NOT_AUTHORIZED:
+				strncpy_s(first_three_bytes, sizeof(first_three_bytes), client_reply, 3);
+				first_three_bytes[3] = '\0'; 
+				
+				if (!strcmp(first_three_bytes, "reg\0")) {
+					//тут надо изменять индикатор для вызова соотв функции
+					data->status_client = ENTER_USERNAME;
 				}
+				else if (!strcmp(first_three_bytes, "log\0")) {
+					//тут надо изменять индикатор для вызова соотв функции
+					data->status_client = ENTER_USERNAME;
+				}
+				break;
+			case ENTER_USERNAME:
+				//соотв функция, куда скидвать имя пользователя для поиска в файлебд
+				data->status_client = ENTER_PASSWORD;
+				break;
+			case ENTER_PASSWORD:
+				//аналогично имени
+				data->status_client = AUTHORIZED;
+				break;
+			case AUTHORIZED:
+				// Рассылка сообщения онлайн клиаентам
+				client_reply[recv_size] = '\0';
+
+				for (size_t i = 0; i < number_online_clients; i++) {
+					if (online_clients[i].client_socket != client_socket && online_clients[i].status_client == AUTHORIZED) {
+						send(online_clients[i].client_socket, client_reply, strlen(client_reply), 0);
+					}
+				}
+				//puts(client_reply);
 			}
-			//puts(client_reply);
+
 		}
 		else {
 			// Обработка ошибки или прерывания соединения
@@ -123,6 +179,8 @@ int main(int argc, char* argv[])
 	struct clientData client_struc;
 
 	HANDLE hMutex = CreateMutex(NULL, FALSE, NULL);
+
+	enum StatusClient status_client = NOT_AUTHORIZED;
 
 	// Инициализация winsock
 	printf("\nInitialising Winsock...");
@@ -168,6 +226,7 @@ int main(int argc, char* argv[])
 	{
 
 		// Заполнение структуры клиента
+		client_struc.status_client = status_client;
 		client_struc.client_socket = new_socket;
 		client_struc.mutex = &hMutex;
 
