@@ -10,8 +10,8 @@
 
 #pragma comment(lib,"ws2_32.lib")
 
-struct clientData *online_clients = NULL;
-size_t number_online_clients = 0;
+struct clientData **online_clients = NULL;
+int number_online_clients = 0;
 
 // Структура данных клиента. Передается в поток.
 struct clientData{
@@ -23,7 +23,7 @@ struct clientData{
 // Добавление клиента в массив онлайн пользователей
 void addClient(struct clientData *data) {
 	number_online_clients++;
-	struct clientData* temp = realloc(online_clients, number_online_clients * sizeof(struct clientData));
+	struct clientData** temp = realloc(online_clients, number_online_clients * sizeof(struct clientData));
 	if (temp == NULL) {
 		printf("Ошибка: Не удалось выделить память\n");
 		return;
@@ -31,67 +31,75 @@ void addClient(struct clientData *data) {
 	online_clients = temp;
 
 	// Добавляем нового клиента в конец массива
-	online_clients[number_online_clients - 1] = *data; 
+	online_clients[number_online_clients - 1] = data; 
+
+	printf("Online clients - %d \n", number_online_clients);
 }
 
 // Удаление клиента из массива онлайн пользователей
-void delClient(SOCKET *client_socket) {
-	// Поиск индекса пользователя по сокету
-	int index = -1;
-	for (int i = 0; i < number_online_clients; i++) {
-		if (online_clients[i].client_socket == *client_socket) {
-			index = i;
-			break;
+void delClient(struct clientData *data) {
+	// Поиск клиента в массиве
+	for (size_t i = 0; i < number_online_clients; i++) {
+		if (online_clients[i] == data) {
+			// Найден клиент, удаляем его из массива
+			for (size_t j = i; j < number_online_clients - 1; j++) {
+				online_clients[j] = online_clients[j + 1];
+			}
+			// Уменьшаем количество онлайн клиентов
+			number_online_clients--;
+
+			// После удаления, уменьшаем размер массива
+			struct clientData** temp = realloc(online_clients, number_online_clients * sizeof(struct clientData*));
+			if (temp == NULL && number_online_clients > 0) {
+				printf("Ошибка: Не удалось изменить размер массива\n");
+				return;
+			}
+			online_clients = temp;
+
+			printf("del. Online - %d\n", number_online_clients);
+			return;
 		}
 	}
 
-	if (index == -1) {
-		// Добавить логирования потом здесь
-		printf("Error: The user was not found\n");
-		return;
-	}
-
-	// Освобождение памяти для удаленного пользователя
-	for (int i = index; i < number_online_clients - 1; i++) {
-		online_clients[i] = online_clients[i + 1];
-	}
-
-	number_online_clients--;
-	online_clients = realloc(online_clients, number_online_clients * sizeof(struct clientData)); // Уменьшаем размер массива
-	printf("Online clients - %d \n", (int)number_online_clients);
+	// Если клиент не найден в массиве
+	printf("Ошибка: Клиент не найден в массиве онлайн клиентов\n");
 }
+
 
 // Обработка подключенного клиента
 void processingClient(struct clientData *data) {
 	char* message, client_reply[2000];
 	int recv_size;
+
+	struct clientData client_struc = *data;
+	struct Client_un_pw username_password;
 	
 	// Строка необходима для reg или log
 	char first_three_bytes[4];
 
-	SOCKET client_socket = data->client_socket;
+	SOCKET client_socket = client_struc.client_socket;
 
 	puts("Connection accepted");
 
 	// Добавление пользователя в массив
-	WaitForSingleObject(data->mutex, INFINITE);
-	addClient(data);
-	ReleaseMutex(data->mutex);
+	WaitForSingleObject(client_struc.mutex, INFINITE);
+	addClient(&client_struc);
+	ReleaseMutex(client_struc.mutex);
 
 	while (TRUE) {
-		switch (data->status_client)
+		switch (client_struc.status_client)
 		{
 		case NOT_AUTHORIZED:
 			message = "reg - sign up\nlog - log in";
-			send(data->client_socket, message, strlen(message), 0);
+			send(client_struc.client_socket, message, strlen(message), 0);
 			break;
 		case ENTER_USERNAME:
 			message = "username: ";
-			send(data->client_socket, message, strlen(message), 0);
+			send(client_struc.client_socket, message, strlen(message), 0);
 			break;
 		case ENTER_PASSWORD:
 			message = "password: ";
-			send(data->client_socket, message, strlen(message), 0);
+			send(client_struc.client_socket, message, strlen(message), 0);
 			break;
 		}
 		
@@ -100,6 +108,10 @@ void processingClient(struct clientData *data) {
 		{
 			puts("recv failed");
 			//надо тут сделать закрытие всего что можно
+			// Удаление пользователя из массива
+			WaitForSingleObject(client_struc.mutex, INFINITE);
+			delClient(&client_struc);
+			ReleaseMutex(client_struc.mutex);
 			return;
 		}
 
@@ -110,36 +122,51 @@ void processingClient(struct clientData *data) {
 
 			//printf("%d", strcmp(first_three_bytes, "reg\0"));
 
-			switch (data->status_client)
+			switch (client_struc.status_client)
 			{
 			case NOT_AUTHORIZED:
 				strncpy_s(first_three_bytes, sizeof(first_three_bytes), client_reply, 3);
 				first_three_bytes[3] = '\0'; 
 				
 				if (!strcmp(first_three_bytes, "reg\0")) {
+					username_password.reg_or_log = 0;
 					//тут надо изменять индикатор для вызова соотв функции
-					data->status_client = ENTER_USERNAME;
+					client_struc.status_client = ENTER_USERNAME;
 				}
 				else if (!strcmp(first_three_bytes, "log\0")) {
+					username_password.reg_or_log = 1;
 					//тут надо изменять индикатор для вызова соотв функции
-					data->status_client = ENTER_USERNAME;
+					client_struc.status_client = ENTER_USERNAME;
 				}
 				break;
 			case ENTER_USERNAME:
+				username_password.username = client_reply;
 				//соотв функция, куда скидвать имя пользователя для поиска в файлебд
-				data->status_client = ENTER_PASSWORD;
+				client_struc.status_client = ENTER_PASSWORD;
 				break;
 			case ENTER_PASSWORD:
+				username_password.password = client_reply;
 				//аналогично имени
-				data->status_client = AUTHORIZED;
+
+				/*
+				if (username_password.reg_or_log) {
+					log_in(&username_password.username, &username_password.password);
+				}
+				else {
+					sign_up(&username_password.username, &username_password.password);
+					
+				}
+				*/
+				client_struc.status_client = AUTHORIZED;
 				break;
 			case AUTHORIZED:
 				// Рассылка сообщения онлайн клиаентам
 				client_reply[recv_size] = '\0';
-
+		
 				for (size_t i = 0; i < number_online_clients; i++) {
-					if (online_clients[i].client_socket != client_socket && online_clients[i].status_client == AUTHORIZED) {
-						send(online_clients[i].client_socket, client_reply, strlen(client_reply), 0);
+					if (online_clients[i]->client_socket != client_socket && online_clients[i]->status_client == AUTHORIZED) {
+						
+						send(online_clients[i]->client_socket, client_reply, recv_size, 0);
 					}
 				}
 				//puts(client_reply);
@@ -153,9 +180,9 @@ void processingClient(struct clientData *data) {
 
 
 			// Удаление пользователя из массива
-			WaitForSingleObject(data->mutex, INFINITE);
-			delClient(&(data->client_socket));
-			ReleaseMutex(data->mutex);
+			WaitForSingleObject(client_struc.mutex, INFINITE);
+			delClient(&client_struc);
+			ReleaseMutex(client_struc.mutex);
 
 			closesocket(client_socket);
 			ExitThread(0);
