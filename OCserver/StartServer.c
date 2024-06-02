@@ -1,11 +1,9 @@
 ﻿#include<io.h>
 #include<stdio.h>
 #include<winsock2.h>
-
 #include <windows.h>
-
 #include <string.h>
-
+#include <time.h>
 #include "LogInSignUp.h"
 
 #pragma comment(lib,"ws2_32.lib")
@@ -69,13 +67,13 @@ void delClient(struct clientData *data) {
 // Обработка подключенного клиента
 void processingClient(struct clientData *data) {
 	char* message, client_reply[2000];
+	int message_len;
 	int recv_size;
 
 	struct clientData client_struc = *data;
-	struct Client_un_pw username_password;
-	
-	// Строка необходима для reg или log
-	char first_three_bytes[4];
+	struct Client_un_pw username_password = {0};
+
+	time_t time_now;
 
 	SOCKET client_socket = client_struc.client_socket;
 
@@ -91,15 +89,15 @@ void processingClient(struct clientData *data) {
 		{
 		case NOT_AUTHORIZED:
 			message = "reg - sign up\nlog - log in";
-			send(client_struc.client_socket, message, strlen(message), 0);
+			send(client_struc.client_socket, message, (int)strlen(message), 0);
 			break;
 		case ENTER_USERNAME:
 			message = "username: ";
-			send(client_struc.client_socket, message, strlen(message), 0);
+			send(client_struc.client_socket, message, (int)strlen(message), 0);
 			break;
 		case ENTER_PASSWORD:
 			message = "password: ";
-			send(client_struc.client_socket, message, strlen(message), 0);
+			send(client_struc.client_socket, message, (int)strlen(message), 0);
 			break;
 		}
 		
@@ -118,58 +116,72 @@ void processingClient(struct clientData *data) {
 		puts("Reply received\n");
 
 		if (recv_size >= 0 && recv_size < 2000) {
-			
-
-			//printf("%d", strcmp(first_three_bytes, "reg\0"));
+			client_reply[recv_size - 1] = '\0';
 
 			switch (client_struc.status_client)
 			{
 			case NOT_AUTHORIZED:
-				strncpy_s(first_three_bytes, sizeof(first_three_bytes), client_reply, 3);
-				first_three_bytes[3] = '\0'; 
 				
-				if (!strcmp(first_three_bytes, "reg\0")) {
+				if (!strcmp(client_reply, "reg\0")) {
 					username_password.reg_or_log = 0;
-					//тут надо изменять индикатор для вызова соотв функции
-					client_struc.status_client = ENTER_USERNAME;
 				}
-				else if (!strcmp(first_three_bytes, "log\0")) {
+				else if (!strcmp(client_reply, "log\0")) {
 					username_password.reg_or_log = 1;
-					//тут надо изменять индикатор для вызова соотв функции
-					client_struc.status_client = ENTER_USERNAME;
 				}
+				else {
+					break;
+				}
+
+				client_struc.status_client = ENTER_USERNAME;
 				break;
 			case ENTER_USERNAME:
-				username_password.username = client_reply;
-				//соотв функция, куда скидвать имя пользователя для поиска в файлебд
+				strcpy_s(username_password.username, sizeof(username_password.username), client_reply);
+				
 				client_struc.status_client = ENTER_PASSWORD;
 				break;
 			case ENTER_PASSWORD:
-				username_password.password = client_reply;
-				//аналогично имени
+				strcpy_s(username_password.password, sizeof(username_password.username), client_reply);
 
-				/*
-				if (username_password.reg_or_log) {
-					log_in(&username_password.username, &username_password.password);
-				}
-				else {
-					sign_up(&username_password.username, &username_password.password);
-					
-				}
-				*/
+				//int result;
+				
 				client_struc.status_client = AUTHORIZED;
 				break;
+
+				//пока скип это
+				/*
+				if (username_password.reg_or_log) {
+					result = log_in(username_password.username, username_password.password);
+				}
+				else {
+					result = sign_up(username_password.username, username_password.password);
+				}
+				
+				if (result) {
+					client_struc.status_client = AUTHORIZED;
+					break;
+				}
+				
+				client_struc.status_client = NOT_AUTHORIZED;
+				break;
+				*/
+
 			case AUTHORIZED:
 				// Рассылка сообщения онлайн клиаентам
-				client_reply[recv_size] = '\0';
-		
+				time(&time_now);
+				struct tm* local_time = localtime(&time_now);
+				message_len = 6 + strlen(username_password.username) + 3 + recv_size;
+				message = (char*)malloc(message_len * sizeof(char));
+				snprintf(message, message_len, "%02d:%02d %s : %s", local_time->tm_hour, local_time->tm_min, username_password.username, client_reply);
+
+
 				for (size_t i = 0; i < number_online_clients; i++) {
 					if (online_clients[i]->client_socket != client_socket && online_clients[i]->status_client == AUTHORIZED) {
 						
-						send(online_clients[i]->client_socket, client_reply, recv_size, 0);
+						send(online_clients[i]->client_socket, message, message_len, 0);
 					}
 				}
 				//puts(client_reply);
+				free(message);
 			}
 
 		}
@@ -258,7 +270,7 @@ int main(int argc, char* argv[])
 		client_struc.mutex = &hMutex;
 
 		// Вынос обработки клиента в отдельный поток
-		CreateThread(NULL, 0, processingClient, &client_struc, 0, NULL);
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)processingClient, &client_struc, 0, NULL);
 		
 	}
 

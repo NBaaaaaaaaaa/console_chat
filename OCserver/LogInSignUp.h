@@ -11,8 +11,8 @@ enum StatusClient
 struct Client_un_pw
 {
 	int reg_or_log;		// reg = 0, log = 1;
-	char* username;
-	char* password;
+	char username[20];
+	char password[20];
 };
 
 int log_in(char* username, char* password);

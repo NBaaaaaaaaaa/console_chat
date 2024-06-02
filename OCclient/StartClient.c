@@ -1,5 +1,6 @@
 ﻿#include<stdio.h>
 #include<winsock2.h>
+#include <Ws2tcpip.h> 
 
 #include <windows.h>
 
@@ -38,7 +39,7 @@ int main(int argc, char* argv[]) {
 	WSADATA wsa;
 	SOCKET s;
 	struct sockaddr_in server;
-	char* message;
+	//char* message;
 
 	char buffer[2000];
 
@@ -77,7 +78,7 @@ int main(int argc, char* argv[]) {
 	client_struc.client_socket = s;
 	client_struc.mutex = &hMutex;
 
-	CreateThread(NULL, 0, listet_server, &client_struc, 0, NULL);
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)listet_server, &client_struc, 0, NULL);
 
 	// Попытка отправки сообщения
 	//message = "Привет hello";
