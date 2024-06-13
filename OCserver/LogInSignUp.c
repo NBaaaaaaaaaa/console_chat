@@ -2,6 +2,8 @@
 #include <string.h>
 #include "LogInSignUp.h"
 
+#include <ctype.h>
+
 static char* client_db = "accountsDB.txt";
 
 struct FileLine
@@ -18,13 +20,20 @@ int log_in(char* username, char* password) {
         perror("Error occured while opening clientsBD.txt");
         return 0;
     }
-    
-    while (fscanf_s(fp, "%u|%19s|%19s", &line.user_id, line.username, (unsigned int)sizeof(line.username), line.password, (unsigned int)sizeof(line.password)) == 3) {
-        printf("%u - %s - %s\n", line.user_id, line.username, line.password);
-        if (!strcmp(username, line.username) && !strcmp(password, line.password)) {
-            fclose(fp);
-            return 1;
+
+    fseek(fp, 0, SEEK_SET);
+
+    char buffer[64]; // Буфер для строки
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+
+        if (sscanf_s(buffer, "%3u|%[^|\n]|%[^|\n]", &line.user_id, line.username, (unsigned int)sizeof(line.username), line.password, (unsigned int)sizeof(line.password)) == 3) {
+
+            if (!strcmp(username, line.username) && !strcmp(password, line.password)) {
+                fclose(fp);
+                return 1;
+            }
         }
+
     }
 
     fclose(fp);
@@ -43,14 +52,20 @@ int sign_up(char* username, char* password) {
 
     fseek(fp, 0, SEEK_SET);
 
-    while (fscanf_s(fp, "%u|%19s|%19s", &line.user_id, line.username, (unsigned int)(20 * sizeof(char)), line.password, (unsigned int)(20 * sizeof(char))) == 3) {
-        printf("%u - %s - %s\n", line.user_id, line.username, line.password);
-        // in_file меняется на 1. если пользователь имеется.
+    char buffer[64]; // Буфер для строки
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        
+        if (sscanf_s(buffer, "%3u|%[^|\n]|%[^|\n]", &line.user_id, line.username, (unsigned int)sizeof(line.username), line.password, (unsigned int)sizeof(line.password)) == 3) {
+           
+            if (!strcmp(line.username, username)) {
+                return 0;
+            }
+        }
+        
     }
-
+    
     if (!in_file) {
-        fputs(("%u|%s|%s", line.user_id + 1, username, password), fp);
-        fputs("\n", fp);
+        fprintf(fp, "%3u|%s|%s\n", line.user_id + 1, username, password);
         puts("good");
     }
 

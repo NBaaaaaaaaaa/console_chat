@@ -142,13 +142,8 @@ void processingClient(struct clientData *data) {
 			case ENTER_PASSWORD:
 				strcpy_s(username_password.password, sizeof(username_password.username), client_reply);
 
-				//int result;
+				int result;
 				
-				client_struc.status_client = AUTHORIZED;
-				break;
-
-				//пока скип это
-				/*
 				if (username_password.reg_or_log) {
 					result = log_in(username_password.username, username_password.password);
 				}
@@ -160,10 +155,11 @@ void processingClient(struct clientData *data) {
 					client_struc.status_client = AUTHORIZED;
 					break;
 				}
-				
+				message = "Error(((";
+				send(client_struc.client_socket, message, (int)strlen(message), 0);
 				client_struc.status_client = NOT_AUTHORIZED;
 				break;
-				*/
+				
 
 			case AUTHORIZED:
 				// Рассылка сообщения онлайн клиаентам

@@ -31,6 +31,7 @@ void listet_server(struct clientData* data) {
 			// Обработка ошибки или прерывания соединения
 			// Например:
 			puts("Error: Invalid recv_size or buffer overflow occurred");
+			break;
 		}
 	}
 }
